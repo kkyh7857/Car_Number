@@ -12,7 +12,7 @@ def getImgUrl():
     files = {} 
     # 'img' 폴더의 사진 찾기 
     
-    if os.path.isdir('img'): 
+    if os.path.isfile('/home/pi/exam/data/2.jpg'): 
         imgFiles = os.listdir('img')
     # 'img' 폴더의 사진을 files 배열로 만든다.
         print(imgFiles)
