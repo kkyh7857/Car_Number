@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import pytesseract
 try:
     from PIL import Image
 except ImportError:
@@ -61,12 +60,12 @@ def find_chars(contour_list):
 
     return matched_result_idx
 
-
+# 사용 후 파일 지우기
 def removeAllFile(filePath):
                 if os.path.exists(filePath):
                     for file in os.scandir(filePath):
                         os.remove(file.path)
-                        
+# 정규 표현식                         
 def regex(name):                        
     regex = re.compile('[0-9]{2}[가-힣]{1}[0-9]{4}|[0-9]{3}[가-힣]{1}[0-9]{4}')
     mc = regex.match(name)
@@ -77,22 +76,23 @@ def regex(name):
         pass
 
 
-####################################
+#################################### main code
     
 while True:
-    if os.path.isfile('/home/pi/exam/data/2.jpg'):
+    if os.path.isfile('/home/pi/exam/data/2.jpg'): #data폴더에 사진이 있는가?
         for i in range(1,6):
             try:
+                # openCV code (바꿀 부분만 바꿔서 사용함.)
                 img = cv2.imread(f'./data/{i}.jpg')
-        #         img_resize = cv2.resize(img, dsize=(200,200), interpolation=cv2.INTER_CUBIC)
                 img_ori = img
+                img = cv2.resize(img, dsize=(200,200), interpolation=cv2.INTER_CUBIC)
                 height, width, channel = img.shape
                 
-        #         print(height, width, channel)
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-                img_blurred = cv2.bilateralFilter(gray, -1, 10, 5)
-                
+                # 정확도 향상을 위해 양방향 필터를 사용(원리를 잘 모름)
+                img_blurred = cv2.bilateralFilter(gray, -1, 10, 5) 
+            
                 img_blur_thresh = cv2.adaptiveThreshold(
                     img_blurred,
                     maxValue=255.0,
@@ -136,12 +136,12 @@ while True:
                         'cx': x + (w / 2),
                         'cy': y + (h / 2)
                     })
-
+                # 수정
                 MIN_AREA = 80
                 MIN_WIDTH, MIN_HEIGHT= 3.5, 8 # 2,8
                 MIN_RATIO, MAX_RATIO = 0.55, 1.0 # 0.25, 1.0
 
-                possible_contours = []
+                possible_contours = [] 
 
                 cnt = 0
                 for d in contours_dict:
@@ -158,6 +158,7 @@ while True:
                 for d in possible_contours:
                     cv2.rectangle(temp_result, pt1=(d['x'], d['y']), pt2=(d['x']+d['w'], d['y']+d['h']), color=(255, 255, 255), thickness=1)
                 
+                # 수정
                 MAX_DIAG_MULTIPLYER = 5 #5 
                 MAX_ANGLE_DIFF = 14.0 #12
                 MAX_AREA_DIFF = 0.5 
@@ -235,7 +236,6 @@ while True:
                     plate_img = cv2.resize(plate_img, dsize=(0, 0), fx=1.6, fy=1.6)
                     _, plate_img = cv2.threshold(plate_img, thresh=0.0, maxval=255.0, type=cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-                    # find contours again (same as above)
                     contours, _ = cv2.findContours(plate_img, mode=cv2.RETR_LIST, method=cv2.CHAIN_APPROX_SIMPLE)
 
                     plate_min_x, plate_min_y = plate_img.shape[1], plate_img.shape[0]
@@ -259,25 +259,13 @@ while True:
 
                     img_result = plate_img[plate_min_y:plate_max_y, plate_min_x:plate_max_x]
 
-        #             img_result = cv2.GaussianBlur(img_result, ksize=(3, 3), sigmaX=0)
-        #             _, img_result = cv2.threshold(img_result, thresh=0.0, maxval=255.0, type=cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-        #             img_result = cv2.copyMakeBorder(img_result, top=10, bottom=10, left=10, right=10, borderType=cv2.BORDER_CONSTANT, value=(0,0,0))
-
-                    # pytesseract.pytesseract.tesseract_cmd = 'C:\Program Files\Tesseract-OCR/tesseract.exe'
-                    # chars = pytesseract.image_to_string(img_result, lang='kor', config='--psm 7 --oem 0')
                     cv2.imwrite('data.png', img_result)
-
-        #             cv2.imshow('data', img_result)
-                                
+                   
+                    # 네이버 클로바 OCR API 사용
                     with open("./data.png", "rb") as f:
                         img = base64.b64encode(f.read())
                     
-                #             img = Image.open("plate.png")
-                    # text = pytesseract.image_to_string(im, lang='kor')
-                     # 본인의 APIGW Invoke URL로 치환
                     URL = "https://cca95788640d4eec88bc8cf970cd218a.apigw.ntruss.com/custom/v1/12993/d6a9fc457f60947d599921461d75adba44916eece6b90c7f19793427f8fbf563/general"
-                        
-                     # 본인의 Secret Key로 치환
                     KEY = "aXh1b0d6ZG5Bd1hPZnJPbnVnT0ltZXh3elNzeWJQY3E="
                         
                     headers = {
@@ -286,9 +274,9 @@ while True:
                     }
                         
                     data = {
-                        "version": "V2", #V2로 고정
-                        "requestId": "sample_id", # 요청을 구분하기 위한 ID, 사용자가 정의
-                        "timestamp": 0, # 현재 시간값
+                        "version": "V2",
+                        "requestId": "sample_id",
+                        "timestamp": 0, 
                         "images": [
                             {
                                 "name": "sample_image",
@@ -311,9 +299,7 @@ while True:
                     print(carnum)
                     print("text present in images:", carnum)
                     
-                    cv2.imwrite(f'./img/{carnum}.jpg', img_ori)
-                    #cv2.drawContours(imageContours,[box],0,(0,0,255),2)
-                                
+                    cv2.imwrite(f'./img/{carnum}.jpg', img_ori)                             
 
                     print(f'GE-001 : {carnum}')
                     cv2.waitKey(0)
@@ -327,7 +313,6 @@ while True:
                         if imgFiles:
                             print('img exists')
 
-                        # 'img' 폴더의 사진을 files 배열로 만든다.
                             for i in range(len(imgFiles)): 
                                 filename = os.path.splitext(os.path.basename(imgFiles[i]))[0]
                                 base64_filename = base64.b64encode(bytes(filename, 'utf-8')).decode()
@@ -339,13 +324,10 @@ while True:
                                 "time": ti_c,
                                 "device":"GE-001"
                             }
-                            
-#                             requests.post('http://172.30.1.7:8087/imageConn/test', files=files, data=obj)
                             requests.post('http://210.223.239.165:8088/Fipl/FileRes', files=files, data=obj)
+                            time.sleep(1)
                             
-                        time.sleep(1)
                         removeAllFile('./img/')
-
             except Exception as e:
                 print(e)
                 pass
